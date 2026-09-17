@@ -1,0 +1,380 @@
+[
+  {
+    "id": "fc-01",
+    "category": "flagged_cells",
+    "question": "How many true positives did the distance detector get on the basophil holdout?",
+    "expected_tools": ["get_flagged_cells"],
+    "answer_type": "numeric",
+    "expected_answer": 1042,
+    "tolerance": 0,
+    "source": "data/experiments/anomaly_detection/holdout_basophil/summary.txt"
+  },
+  {
+    "id": "fc-02",
+    "category": "flagged_cells",
+    "question": "What was the MSP baseline's F1 score on the eosinophil holdout?",
+    "expected_tools": ["get_flagged_cells"],
+    "answer_type": "numeric",
+    "expected_answer": 0.7027,
+    "tolerance": 0.001,
+    "source": "data/experiments/anomaly_detection/holdout_eosinophil/summary.txt"
+  },
+  {
+    "id": "fc-03",
+    "category": "flagged_cells",
+    "question": "How many false negatives did the distance detector have on the erythroblast holdout?",
+    "expected_tools": ["get_flagged_cells"],
+    "answer_type": "numeric",
+    "expected_answer": 33,
+    "tolerance": 0,
+    "source": "data/experiments/anomaly_detection/holdout_erythroblast/summary.txt"
+  },
+  {
+    "id": "fc-04",
+    "category": "flagged_cells",
+    "question": "What is the distance detector's recall on the monocyte holdout?",
+    "expected_tools": ["get_flagged_cells"],
+    "answer_type": "numeric",
+    "expected_answer": 0.5732,
+    "tolerance": 0.001,
+    "source": "data/experiments/anomaly_detection/holdout_monocyte/summary.txt"
+  },
+  {
+    "id": "fc-05",
+    "category": "flagged_cells",
+    "question": "How many false positives did the MSP baseline produce on the neutrophil holdout?",
+    "expected_tools": ["get_flagged_cells"],
+    "answer_type": "numeric",
+    "expected_answer": 87,
+    "tolerance": 0,
+    "source": "data/experiments/anomaly_detection/holdout_neutrophil/summary.txt"
+  },
+  {
+    "id": "fc-06",
+    "category": "flagged_cells",
+    "question": "What is the distance detector's precision on the platelet holdout?",
+    "expected_tools": ["get_flagged_cells"],
+    "answer_type": "numeric",
+    "expected_answer": 0.9341,
+    "tolerance": 0.001,
+    "source": "data/experiments/anomaly_detection/holdout_platelet/summary.txt"
+  },
+  {
+    "id": "fc-07",
+    "category": "flagged_cells",
+    "question": "Across all 8 holdout classes, which class gives the distance detector its highest F1 score?",
+    "expected_tools": ["get_flagged_cells"],
+    "answer_type": "string",
+    "expected_answer": "erythroblast",
+    "source": "data/experiments/anomaly_detection/holdout_*/summary.txt (F1=0.9449, next best neutrophil=0.9425)"
+  },
+  {
+    "id": "fc-08",
+    "category": "flagged_cells",
+    "question": "Across all 8 holdout classes, which class gives the distance detector its lowest F1 score?",
+    "expected_tools": ["get_flagged_cells"],
+    "answer_type": "string",
+    "expected_answer": "monocyte",
+    "source": "data/experiments/anomaly_detection/holdout_*/summary.txt (F1=0.6987)"
+  },
+  {
+    "id": "fc-09",
+    "category": "flagged_cells",
+    "question": "Which holdout class gives the distance detector the fewest false positives?",
+    "expected_tools": ["get_flagged_cells"],
+    "answer_type": "string",
+    "expected_answer": "eosinophil",
+    "source": "data/experiments/anomaly_detection/holdout_*/summary.txt (FP=89)"
+  },
+  {
+    "id": "fc-10",
+    "category": "flagged_cells",
+    "question": "Which holdout class gives the distance detector the most false negatives?",
+    "expected_tools": ["get_flagged_cells"],
+    "answer_type": "string",
+    "expected_answer": "platelet",
+    "source": "data/experiments/anomaly_detection/holdout_*/summary.txt (FN=817)"
+  },
+  {
+    "id": "fc-11",
+    "category": "flagged_cells",
+    "question": "On the ig holdout, does the distance detector have more true positives than the MSP baseline?",
+    "expected_tools": ["get_flagged_cells"],
+    "answer_type": "string",
+    "expected_answer": "no",
+    "source": "data/experiments/anomaly_detection/holdout_ig/summary.txt (dist TP=2151, MSP TP=2208, MSP has more)"
+  },
+  {
+    "id": "fc-12",
+    "category": "flagged_cells",
+    "question": "How many true negatives did the MSP baseline get on the lymphocyte holdout?",
+    "expected_tools": ["get_flagged_cells"],
+    "answer_type": "numeric",
+    "expected_answer": 2258,
+    "tolerance": 0,
+    "source": "data/experiments/anomaly_detection/holdout_lymphocyte/summary.txt"
+  },
+  {
+    "id": "cs-01",
+    "category": "cluster_summary",
+    "question": "In the 2-class holdout clustering experiment, which clustering method achieves the highest mean ARI?",
+    "expected_tools": ["get_cluster_summary"],
+    "answer_type": "string",
+    "expected_answer": "HDBSCAN (auto k)",
+    "source": "data/experiments/cluster_discovery/summary_metrics.txt (2-class section, ARI=0.8874)"
+  },
+  {
+    "id": "cs-02",
+    "category": "cluster_summary",
+    "question": "What is the mean ARI for GMM with oracle k in the 2-class holdout clustering experiment?",
+    "expected_tools": ["get_cluster_summary"],
+    "answer_type": "numeric",
+    "expected_answer": 0.8806,
+    "tolerance": 0.001,
+    "source": "data/experiments/cluster_discovery/summary_metrics.txt"
+  },
+  {
+    "id": "cs-03",
+    "category": "cluster_summary",
+    "question": "In the 3-class holdout clustering experiment, which clustering method achieves the highest mean ARI?",
+    "expected_tools": ["get_cluster_summary"],
+    "answer_type": "string",
+    "expected_answer": "K-Means (oracle k)",
+    "source": "data/experiments/cluster_discovery/summary_metrics.txt (3-class section, ARI=0.7820)"
+  },
+  {
+    "id": "cs-04",
+    "category": "cluster_summary",
+    "question": "What is the mean purity for HDBSCAN with auto k in the 3-class holdout clustering experiment?",
+    "expected_tools": ["get_cluster_summary"],
+    "answer_type": "numeric",
+    "expected_answer": 0.8929,
+    "tolerance": 0.001,
+    "source": "data/experiments/cluster_discovery/summary_metrics.txt"
+  },
+  {
+    "id": "cs-05",
+    "category": "cluster_summary",
+    "question": "What is the mean anomaly-flagging F1 score for the 2-class holdout clustering scenario?",
+    "expected_tools": ["get_cluster_summary"],
+    "answer_type": "numeric",
+    "expected_answer": 0.8897,
+    "tolerance": 0.001,
+    "source": "data/experiments/cluster_discovery/summary_metrics.txt"
+  },
+  {
+    "id": "cs-06",
+    "category": "cluster_summary",
+    "question": "What is the mean anomaly-flagging precision for the 3-class holdout clustering scenario?",
+    "expected_tools": ["get_cluster_summary"],
+    "answer_type": "numeric",
+    "expected_answer": 0.9847,
+    "tolerance": 0.001,
+    "source": "data/experiments/cluster_discovery/summary_metrics.txt"
+  },
+  {
+    "id": "cs-07",
+    "category": "cluster_summary",
+    "question": "In the 2-class holdout clustering splits, which two classes were held out together in split 0?",
+    "expected_tools": ["get_cluster_summary"],
+    "answer_type": "string_all",
+    "expected_answer": ["basophil", "ig"],
+    "source": "data/experiments/cluster_discovery/summary_metrics.txt (Split 0)"
+  },
+  {
+    "id": "cs-08",
+    "category": "cluster_summary",
+    "question": "In the 2-class holdout clustering experiment, does K-Means with oracle k or K-Means with auto k get a higher mean ARI?",
+    "expected_tools": ["get_cluster_summary"],
+    "answer_type": "string",
+    "expected_answer": "oracle",
+    "source": "data/experiments/cluster_discovery/summary_metrics.txt (oracle k=0.8434 vs auto k=0.3684)"
+  },
+  {
+    "id": "cs-09",
+    "category": "cluster_summary",
+    "question": "Which scenario has a higher mean anomaly-flagging recall: the 2-class holdout or the 3-class holdout clustering experiment?",
+    "expected_tools": ["get_cluster_summary"],
+    "answer_type": "string",
+    "expected_answer": "2-class",
+    "source": "data/experiments/cluster_discovery/summary_metrics.txt (k=2 recall=0.8264 vs k=3 recall=0.8248, close)"
+  },
+  {
+    "id": "cs-10",
+    "category": "cluster_summary",
+    "question": "In the 2-class holdout clustering experiment, list every split that holds out the basophil class, and which other class it is paired with.",
+    "expected_tools": ["get_cluster_summary"],
+    "answer_type": "string_all",
+    "expected_answer": ["ig", "erythroblast", "neutrophil"],
+    "source": "data/experiments/cluster_discovery/summary_metrics.txt (basophil appears in splits 0, 2, 8, paired with ig, erythroblast, neutrophil)"
+  },
+  {
+    "id": "cb-01",
+    "category": "compare_baseline",
+    "question": "For the basophil holdout, does the distance detector or the MSP baseline win on F1 in the anomaly detection task?",
+    "expected_tools": ["compare_to_baseline"],
+    "answer_type": "string",
+    "expected_answer": "dist",
+    "source": "data/experiments/anomaly_detection/holdout_basophil/summary.txt (dist=0.879 vs msp=0.6804)"
+  },
+  {
+    "id": "cb-02",
+    "category": "compare_baseline",
+    "question": "For the ig holdout, which detector has higher precision in the anomaly detection task: the distance detector or MSP?",
+    "expected_tools": ["compare_to_baseline"],
+    "answer_type": "string",
+    "expected_answer": "msp",
+    "source": "data/experiments/anomaly_detection/holdout_ig/summary.txt (dist=0.9513 vs msp=0.9521, very close)"
+  },
+  {
+    "id": "cb-03",
+    "category": "compare_baseline",
+    "question": "For the monocyte holdout, by how much does the distance detector's recall exceed the MSP baseline's recall in the anomaly detection task?",
+    "expected_tools": ["compare_to_baseline"],
+    "answer_type": "numeric",
+    "expected_answer": 0.2887,
+    "tolerance": 0.001,
+    "source": "data/experiments/anomaly_detection/holdout_monocyte/summary.txt (dist=0.5732, msp=0.2845)"
+  },
+  {
+    "id": "cb-04",
+    "category": "compare_baseline",
+    "question": "For the neutrophil holdout, which detector has the higher AUROC: distance or MSP?",
+    "expected_tools": ["compare_to_baseline"],
+    "answer_type": "string",
+    "expected_answer": "dist",
+    "source": "data/experiments/anomaly_detection/holdout_neutrophil/summary.txt (dist=0.9731 vs msp=0.9241)"
+  },
+  {
+    "id": "cb-05",
+    "category": "compare_baseline",
+    "question": "For the eosinophil holdout, which detector has the higher AUPRC: distance or MSP?",
+    "expected_tools": ["compare_to_baseline"],
+    "answer_type": "string",
+    "expected_answer": "dist",
+    "source": "data/experiments/anomaly_detection/holdout_eosinophil/summary.txt (dist=0.9662 vs msp=0.9371)"
+  },
+  {
+    "id": "cb-06",
+    "category": "compare_baseline",
+    "question": "For the platelet holdout, which detector has the higher MCC: distance or MSP?",
+    "expected_tools": ["compare_to_baseline"],
+    "answer_type": "string",
+    "expected_answer": "dist",
+    "source": "data/experiments/anomaly_detection/holdout_platelet/summary.txt (dist=0.6283 vs msp=0.5407)"
+  },
+  {
+    "id": "cb-07",
+    "category": "compare_baseline",
+    "question": "For the erythroblast holdout, which detector has the higher specificity: distance or MSP?",
+    "expected_tools": ["compare_to_baseline"],
+    "answer_type": "string",
+    "expected_answer": "msp",
+    "source": "data/experiments/anomaly_detection/holdout_erythroblast/summary.txt (dist=0.9383 vs msp=0.9404, very close)"
+  },
+  {
+    "id": "cb-08",
+    "category": "compare_baseline",
+    "question": "For the lymphocyte holdout, which detector achieves the lower (better) false positive rate: distance or MSP?",
+    "expected_tools": ["compare_to_baseline"],
+    "answer_type": "string",
+    "expected_answer": "dist",
+    "source": "data/experiments/anomaly_detection/holdout_lymphocyte/summary.txt (dist FPR=0.0495 vs msp FPR=0.0521 - lower is better)"
+  },
+  {
+    "id": "cb-09",
+    "category": "compare_baseline",
+    "question": "For the basophil holdout, which detector has the higher AUROC: distance or MSP?",
+    "expected_tools": ["compare_to_baseline"],
+    "answer_type": "string",
+    "expected_answer": "dist",
+    "source": "data/experiments/anomaly_detection/holdout_basophil/summary.txt (dist=0.975 vs msp=0.9524)"
+  },
+  {
+    "id": "cb-10",
+    "category": "compare_baseline",
+    "question": "For the monocyte holdout, in the classification task (not anomaly detection), does the distance detector or MSP get the higher F1 for that class?",
+    "expected_tools": ["compare_to_baseline"],
+    "answer_type": "string",
+    "expected_answer": "msp",
+    "source": "data/experiments/classification/summary.txt (dist F1=0.9624 vs msp F1=0.9701)"
+  },
+  {
+    "id": "cb-11",
+    "category": "compare_baseline",
+    "question": "For the ig holdout, in the classification task, does the distance detector or MSP get the higher recall for that class?",
+    "expected_tools": ["compare_to_baseline"],
+    "answer_type": "string",
+    "expected_answer": "msp",
+    "source": "data/experiments/classification/summary.txt (dist R=0.9677 vs msp R=0.9747)"
+  },
+  {
+    "id": "cb-12",
+    "category": "compare_baseline",
+    "question": "For the platelet holdout, in the classification task, is there any difference between the distance detector's and MSP's precision for that class?",
+    "expected_tools": ["compare_to_baseline"],
+    "answer_type": "string",
+    "expected_answer": "tie",
+    "source": "data/experiments/classification/summary.txt (dist P=1.0 vs msp P=1.0, tie)"
+  },
+  {
+    "id": "un-01",
+    "category": "unsupported",
+    "question": "What is the distance detector's overall classification accuracy across the full 8-class known test set (not per-class)?",
+    "expected_tools": [],
+    "answer_type": "unsupported",
+    "expected_answer": 0.9821,
+    "note": "Overall accuracy is in the file but not exposed by any tool (only per-class F1/P/R via compare_to_baseline).",
+    "source": "data/experiments/classification/summary.txt"
+  },
+  {
+    "id": "un-02",
+    "category": "unsupported",
+    "question": "Which feature extractor achieves the highest mean AUROC in the feature extractor ablation study?",
+    "expected_tools": [],
+    "answer_type": "unsupported",
+    "expected_answer": "DinoBloom-L",
+    "note": "No tool reads feature_extractor_effect/summary.txt.",
+    "source": "data/experiments/feature_extractor_effect/summary.txt"
+  },
+  {
+    "id": "un-03",
+    "category": "unsupported",
+    "question": "What is the distance detector's AUROC when evaluated cross-domain on the PBC-large dataset?",
+    "expected_tools": [],
+    "answer_type": "unsupported",
+    "expected_answer": 0.5101,
+    "note": "No tool reads cross_domain/summary.txt.",
+    "source": "data/experiments/cross_domain/summary.txt"
+  },
+  {
+    "id": "un-04",
+    "category": "unsupported",
+    "question": "What PCA dimensionality was used in the best configuration found by the hyperparameter search?",
+    "expected_tools": [],
+    "answer_type": "unsupported",
+    "expected_answer": 100,
+    "note": "No tool reads config_search/best_config.csv.",
+    "source": "data/config_search/best_config.csv"
+  },
+  {
+    "id": "un-05",
+    "category": "unsupported",
+    "question": "In the cross-domain evaluation, what is the distance detector's specificity for the Basophil class?",
+    "expected_tools": [],
+    "answer_type": "unsupported",
+    "expected_answer": 0.7601,
+    "note": "No tool reads cross_domain/summary.txt.",
+    "source": "data/experiments/cross_domain/summary.txt"
+  },
+  {
+    "id": "un-06",
+    "category": "unsupported",
+    "question": "How many total samples are in the PBC-large cross-domain evaluation set?",
+    "expected_tools": [],
+    "answer_type": "unsupported",
+    "expected_answer": 14673,
+    "note": "No tool reads cross_domain/summary.txt.",
+    "source": "data/experiments/cross_domain/summary.txt"
+  }
+]

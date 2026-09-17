@@ -1,0 +1,2 @@
+dist_metric,pca_components,mean_auroc,std_auroc
+mahalanobis_per_class_cov,100,0.9604424354605952,0.031893443579800715
