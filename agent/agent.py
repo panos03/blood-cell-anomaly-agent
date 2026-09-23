@@ -24,8 +24,9 @@ from agent import tools as t
 
 # Requires a free API key from https://aistudio.google.com (no card needed),
 # set as the GOOGLE_API_KEY environment variable. "flash" models sit on
-# Gemini's free tier; see ai.google.dev for current rate limits/model names.
-MODEL = os.environ.get("BLOOD_CELL_AGENT_MODEL", "gemini-3.7-flash")
+# Gemini's free tier ("pro" models don't - free-tier quota is 0 for those);
+# see ai.google.dev for current rate limits/model names.
+MODEL = os.environ.get("BLOOD_CELL_AGENT_MODEL", "gemini-3.6-flash")
 
 SYSTEM_PROMPT = f"""You are an analysis assistant for a blood-cell anomaly
 detection research project. You answer questions about experiment results by
@@ -47,7 +48,12 @@ Likewise, get_cluster_summary only covers one k (2 or 3) per call. If a
 question isn't scoped to a specific k (e.g. "which clustering method works
 best overall"), call it for both k=2 and k=3 and compare yourself.
 
-Answer concisely and always cite the concrete numbers you found."""
+Answer concisely and always cite the concrete numbers you found.
+
+Your answers are printed to a plain terminal, not rendered as Markdown - so
+write plain text only. No **bold**, no # headers, no tables, no bullet
+markup. Use plain sentences, or simple "label: value" lines and blank-line
+separated paragraphs if you need structure."""
 
 
 @tool
@@ -99,6 +105,20 @@ def compare_to_baseline(holdout_class: str, metric: str) -> dict:
 TOOLS = [get_flagged_cells, get_cluster_summary, compare_to_baseline]
 
 
+def extract_text(message) -> str:
+    # A response's .content is a plain string for some models, but Gemini
+    # returns a list of content blocks (with extra metadata like safety/
+    # signature info) - this pulls out just the actual answer text either way.
+    content = message.content
+    if isinstance(content, str):
+        return content
+    parts = []
+    for block in content:
+        if isinstance(block, dict) and block.get("type") == "text":
+            parts.append(block["text"])
+    return "\n".join(parts)
+
+
 def build_agent():
     # Assembles Gemini + the 3 tools + the system prompt into an agent.
     # Just builds it, doesn't ask anything yet.
@@ -112,7 +132,7 @@ def ask(question: str) -> str:
     # inspect which tools were called along the way.)
     agent = build_agent()
     result = agent.invoke({"messages": [HumanMessage(content=question)]})
-    return result["messages"][-1].content
+    return extract_text(result["messages"][-1])
 
 
 if __name__ == "__main__":

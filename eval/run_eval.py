@@ -12,7 +12,7 @@ were called, and a heuristic grading verdict, then writes a per-question
 table plus summary statistics to eval/results.md.
 
 Usage:
-    python -m eval.run_eval [--limit N] [--model gemini-3.7-flash]
+    python -m eval.run_eval [--limit N] [--model gemini-3.6-flash]
 
 Requires GOOGLE_API_KEY (a free key from https://aistudio.google.com) to be
 set - every question costs a real API call in each condition.
@@ -21,14 +21,21 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import re
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-from agent.agent import build_agent
+from agent.agent import build_agent, extract_text
+
+# Silences a one-time informational notice from Google's SDK about its own
+# internal API choice (generate_content vs. Chat.send_message) - not related
+# to anything this project does, safe to ignore.
+logging.getLogger("google_genai.models").setLevel(logging.ERROR)
 
 ROOT = Path(__file__).resolve().parent.parent
 QUESTIONS_PATH = ROOT / "eval" / "questions.json"
@@ -62,17 +69,6 @@ def _load_questions(limit: int | None) -> list[dict]:
     return questions[:limit] if limit else questions
 
 
-def _extract_text(message) -> str:
-    content = message.content
-    if isinstance(content, str):
-        return content
-    parts = []
-    for block in content:
-        if isinstance(block, dict) and block.get("type") == "text":
-            parts.append(block["text"])
-    return "\n".join(parts)
-
-
 def _run_with_tools(agent, question: str) -> tuple[str, list[str]]:
     # Condition 1: ask the real agent, then read back which tools it called
     # from the transcript (not just its final answer).
@@ -84,7 +80,7 @@ def _run_with_tools(agent, question: str) -> tuple[str, list[str]]:
         if isinstance(m, AIMessage)
         for call in (m.tool_calls or [])
     ]
-    final_text = _extract_text(messages[-1])
+    final_text = extract_text(messages[-1])
     return final_text, tools_called
 
 
@@ -103,7 +99,7 @@ def _run_without_tools(model, question: str) -> str:
             )
         ]
     )
-    return _extract_text(response)
+    return extract_text(response)
 
 
 def _numbers_in(text: str) -> list[float]:
@@ -118,6 +114,10 @@ def _grade_numeric(answer_text: str, expected: float, tolerance: float) -> str:
 
 
 def _grade_string(answer_text: str, expected: str) -> str:
+    # Naive substring match, not a judge of the model's actual conclusion -
+    # a verbose answer that names several classes while getting a ranking
+    # wrong can still contain the expected name and pass. See README ->
+    # "Known limitation of the grader" for a real example this missed.
     return "correct" if expected.lower() in answer_text.lower() else "incorrect"
 
 
@@ -154,21 +154,50 @@ def _tool_call_correct(question: dict, tools_called: list[str]) -> bool | None:
     return any(t in tools_called for t in expected)
 
 
-def run(limit: int | None, model_id: str) -> list[QuestionResult]:
+def _blockquote(text: str) -> str:
+    # Prefixes every line with "> " so multi-line/long answer text renders
+    # safely as a Markdown blockquote instead of breaking a table cell.
+    lines = text.strip().splitlines() or [""]
+    return "\n".join(f"> {line}" for line in lines)
+
+
+def _truncate(text: str, limit: int = 160) -> str:
+    # Collapses an answer onto one line and shortens it, just for readable
+    # live console output - the full text still goes into results.md.
+    text = " ".join(text.split())
+    return text if len(text) <= limit else text[: limit - 3] + "..."
+
+
+def _print_progress(q: dict, wt_answer: str, tools_called: list[str], wt_verdict: str, wot_answer: str, wot_verdict: str) -> None:
+    print(f"[{q['id']}] {q['question']}")
+    print(f"  expected answer: {q['expected_answer']!r}   expected tools: {q['expected_tools'] or '(none)'}")
+    print(f"  with tools    [{wt_verdict:>9}] tools called: {tools_called or '(none)'}")
+    print(f"                    -> {_truncate(wt_answer)}")
+    print(f"  without tools [{wot_verdict:>9}] -> {_truncate(wot_answer)}")
+    print()
+
+
+def run(limit: int | None, model_id: str, delay: float) -> list[QuestionResult]:
     # Main loop: for every question, run both conditions and grade each one.
+    # `delay` paces requests to stay under free-tier per-minute rate limits -
+    # without it, back-to-back questions can trip a 429 and fall into the
+    # SDK's own (much longer) automatic retry/backoff instead.
     questions = _load_questions(limit)
     agent = build_agent()
     plain_model = ChatGoogleGenerativeAI(model=model_id, max_output_tokens=1024)
 
     results = []
-    for q in questions:
-        print(f"[{q['id']}] {q['question']}")
+    for i, q in enumerate(questions):
+        if i > 0 and delay > 0:
+            time.sleep(delay)
 
         wt_answer, tools_called = _run_with_tools(agent, q["question"])
         wt_verdict = _grade(q, wt_answer)
 
         wot_answer = _run_without_tools(plain_model, q["question"])
         wot_verdict = _grade(q, wot_answer)
+
+        _print_progress(q, wt_answer, tools_called, wt_verdict, wot_answer, wot_verdict)
 
         results.append(
             QuestionResult(
@@ -250,18 +279,32 @@ def _summarize(results: list[QuestionResult], questions: list[dict]) -> str:
         lines.append(f"- {cat}: {correct}/{len(cat_results)} ({correct / len(cat_results):.0%})")
     lines.append("")
 
-    lines += [
-        "## Per-question detail",
-        "",
-        "| ID | Category | With tools | Tools called | Without tools |",
-        "|---|---|---|---|---|",
-    ]
+    # A table can't hold multi-line/long answer text without breaking its
+    # formatting, so each question gets its own section instead, with the
+    # full given vs. expected answer quoted below it.
+    lines += ["## Per-question detail", ""]
     for r in results:
-        lines.append(
-            f"| {r.id} | {r.category} | {r.with_tools_verdict} | "
-            f"{', '.join(r.with_tools_tools_called) or '-'} | {r.without_tools_verdict} |"
-        )
-    lines.append("")
+        q = q_by_id[r.id]
+        lines += [
+            f"### {r.id} ({r.category})",
+            "",
+            f"**Question:** {r.question}",
+            "",
+            f"**Expected answer:** `{q['expected_answer']}`  ",
+            f"**Expected tools:** {', '.join(q['expected_tools']) or '(none)'}",
+            "",
+            f"**With tools** - verdict: `{r.with_tools_verdict}` - "
+            f"tools called: {', '.join(r.with_tools_tools_called) or '(none)'}",
+            "",
+            _blockquote(r.with_tools_answer),
+            "",
+            f"**Without tools** - verdict: `{r.without_tools_verdict}`",
+            "",
+            _blockquote(r.without_tools_answer),
+            "",
+            "---",
+            "",
+        ]
 
     return "\n".join(lines)
 
@@ -271,15 +314,21 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=None, help="Only run the first N questions")
     parser.add_argument(
-        "--model", type=str, default=None, help="Override the model id used for both conditions (default: gemini-3.7-flash)"
+        "--model", type=str, default=None, help="Override the model id used for both conditions (default: gemini-3.6-flash)"
+    )
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=3.0,
+        help="Seconds to wait between questions, to stay under free-tier rate limits (default: 3.0)",
     )
     args = parser.parse_args()
 
     import os
 
-    model_id = args.model or os.environ.get("BLOOD_CELL_AGENT_MODEL", "gemini-3.7-flash")
+    model_id = args.model or os.environ.get("BLOOD_CELL_AGENT_MODEL", "gemini-3.6-flash")
 
-    results, questions = run(args.limit, model_id)
+    results, questions = run(args.limit, model_id, args.delay)
     report = _summarize(results, questions)
     RESULTS_PATH.write_text(report, encoding="utf-8")
     print(f"\nWrote {RESULTS_PATH}")
