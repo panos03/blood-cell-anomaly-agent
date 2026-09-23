@@ -85,7 +85,7 @@ question costs several real API calls (the agent's tool-calling loop is
 2+ calls by itself), so `--limit N` is worth using rather than the full 40
 at once - see **Notes**.
 
-## Key results (4/40 questions run so far)
+## Key results (4/40 questions run so far - see notes below)
 
 | Metric | With tools (agent) | Without tools (plain Gemini) |
 |---|---|---|
