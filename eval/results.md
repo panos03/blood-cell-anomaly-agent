@@ -1,6 +1,7 @@
 # Evaluation Results
 
 Questions: 4 (4 answerable via tools, 0 intentionally unsupported)
+NOTE: only these 4 were run due to free API rate limits
 
 ## Headline metrics
 
