@@ -1,10 +1,11 @@
+# TODO
+
 # blood-cell-agent
 
 An LLM agent that answers natural-language questions about the results of
 [rare-cell-morphologies](../rare-cell-morphologies), a blood-cell anomaly
-detection FYP. Built to demonstrate LangGraph + MCP skills: a ReAct agent
-with grounded tool use, and an MCP server exposing the same tools to Claude
-Desktop.
+detection FYP. Built to demonstrate LangGraph skills: a ReAct agent with
+grounded tool use over the project's static experiment results.
 
 This repo is standalone and does not modify the original FYP repo - it only
 reads 15 static result files copied into `data/`.
@@ -15,10 +16,9 @@ reads 15 static result files copied into `data/`.
   files (`.txt`/`.csv`) with regex. No ML inference at runtime; the
   thresholds and metrics were already computed by the FYP pipeline.
 - **`agent/agent.py`** - a LangGraph ReAct agent (`create_react_agent`) that
-  uses Claude to decide which tool to call to answer a question.
-- **`agent/mcp_server.py`** - an MCP server (stdio transport) exposing the
-  same three tools, so Claude Desktop or another MCP client can call them
-  directly.
+  uses Gemini to decide which tool to call to answer a question. See the
+  comment near the top of that file for why this project doesn't need an
+  MCP server on top of it.
 - **`eval/`** - 40 hand-written Q&A pairs with known answers, and a harness
   that measures accuracy with vs. without tool access, correct tool call
   rate, and failure modes.
@@ -51,49 +51,22 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-Set your API key (or run `ant auth login` if you use the Anthropic CLI):
+Get a free API key at [aistudio.google.com](https://aistudio.google.com) (no
+card required), then set it:
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
+export GOOGLE_API_KEY=AIza...
 ```
 
-By default everything uses `claude-opus-5`. Override with
-`BLOOD_CELL_AGENT_MODEL` if you want a cheaper model for eval runs, e.g.
-`export BLOOD_CELL_AGENT_MODEL=claude-sonnet-5`.
+By default everything uses `gemini-3.7-flash`, which sits on Gemini's free
+tier (rate-limited, not unlimited - see ai.google.dev for current limits).
+Override with `BLOOD_CELL_AGENT_MODEL` to use a different model, e.g.
+`export BLOOD_CELL_AGENT_MODEL=gemini-3.1-pro-preview`.
 
 ## Running the agent
 
 ```bash
 python -m agent.agent "Which holdout class had the best F1?"
-```
-
-## Running the MCP server
-
-```bash
-python -m agent.mcp_server
-```
-
-To use it from Claude Desktop, add to `claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "blood-cell-agent": {
-      "command": "python",
-      "args": ["-m", "agent.mcp_server"],
-      "cwd": "/absolute/path/to/blood-cell-agent"
-    }
-  }
-}
-```
-
-To verify the server works without needing Claude Desktop or an API key,
-`agent/mcp_smoke_test.py` spawns it as a real subprocess, connects a proper
-MCP client over stdio, and checks its tool responses against calling
-`tools.py` directly:
-
-```bash
-python -m agent.mcp_smoke_test
 ```
 
 ## Running the eval
@@ -103,10 +76,10 @@ python -m eval.run_eval
 ```
 
 Runs all 40 questions through the tool-using agent and a plain (no-tool)
-Claude call, grades each answer, and writes `eval/results.md`. Every
+Gemini call, grades each answer, and writes `eval/results.md`. Every
 question costs one API call per condition (80 calls total for the full
-set) - use `--limit N` to try a smaller batch first, or `--model` to pick a
-cheaper model.
+set) - use `--limit N` to try a smaller batch first if you're worried about
+free-tier rate limits.
 
 ## Verifying the tools directly
 

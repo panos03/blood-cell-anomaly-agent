@@ -1,6 +1,6 @@
 """LangGraph ReAct agent that answers questions about the FYP's anomaly
-detection results, using Claude (via langchain-anthropic) as the model and
-agent/tools.py as its tool surface.
+detection results, using Gemini (via langchain-google-genai) as the model
+and agent/tools.py as its tool surface.
 
 Usage:
     python -m agent.agent "Which holdout class had the best F1?"
@@ -10,30 +10,42 @@ from __future__ import annotations
 import os
 import sys
 
-from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.prebuilt import create_react_agent
 
 from agent import tools as t
 
-MODEL = os.environ.get("BLOOD_CELL_AGENT_MODEL", "claude-opus-5")
+# NOTE: Why no MCP server:
+# MCP exposes tools over stdio/HTTP to external clients (like Claude Desktop).
+# Because this script runs in-process and calls tools directly via LangChain's
+# @tool decorator, an MCP server is not necessary.
+
+# Requires a free API key from https://aistudio.google.com (no card needed),
+# set as the GOOGLE_API_KEY environment variable. "flash" models sit on
+# Gemini's free tier; see ai.google.dev for current rate limits/model names.
+MODEL = os.environ.get("BLOOD_CELL_AGENT_MODEL", "gemini-3.7-flash")
 
 SYSTEM_PROMPT = f"""You are an analysis assistant for a blood-cell anomaly
 detection research project. You answer questions about experiment results by
-calling the tools available to you - never guess numbers from memory.
+calling the tools available to you. Never guess numbers from memory.
 
 Context: the project holds out one white-blood-cell class at a time and
 trains a distance-based anomaly detector (a Mahalanobis-distance detector
 over DinoBloom features) to flag cells of that class as anomalies, compared
 against a Maximum Softmax Probability (MSP) baseline. Results are static and
-were computed once; your tools just read them.
+were computed once, your tools just read them.
 
 Valid holdout classes: {", ".join(t.HOLDOUT_CLASSES)}.
 
-When a question requires comparing across holdout classes (e.g. "best F1"),
+When a question requires comparing across all holdout classes (e.g. "best F1"),
 call get_flagged_cells for each relevant class and compare the results
-yourself - there is no single tool that ranks all classes at once.
+yourself, there is no single tool that ranks all classes at once.
+
+Likewise, get_cluster_summary only covers one k (2 or 3) per call. If a
+question isn't scoped to a specific k (e.g. "which clustering method works
+best overall"), call it for both k=2 and k=3 and compare yourself.
 
 Answer concisely and always cite the concrete numbers you found."""
 
@@ -76,6 +88,10 @@ def compare_to_baseline(holdout_class: str, metric: str) -> dict:
         metric: one of auroc, auprc, recall, precision, f1, mcc,
             specificity, fpr (anomaly-detection metrics), or f1/precision/
             recall (also matched against the classification per-class table).
+
+    The returned "winner" already accounts for metric direction (lower is
+    better for fpr, higher is better for everything else) - trust it as-is
+    rather than re-deriving it from which raw number looks bigger.
     """
     return t.compare_to_baseline(holdout_class, metric)
 
@@ -84,17 +100,23 @@ TOOLS = [get_flagged_cells, get_cluster_summary, compare_to_baseline]
 
 
 def build_agent():
-    model = ChatAnthropic(model=MODEL, max_tokens=4096)
+    # Assembles Gemini + the 3 tools + the system prompt into an agent.
+    # Just builds it, doesn't ask anything yet.
+    model = ChatGoogleGenerativeAI(model=MODEL, max_output_tokens=4096)
     return create_react_agent(model, TOOLS, prompt=SYSTEM_PROMPT)
 
 
 def ask(question: str) -> str:
+    # Runs one question through the agent and returns its final answer.
+    # (result["messages"] has the full back-and-forth if we want to
+    # inspect which tools were called along the way.)
     agent = build_agent()
     result = agent.invoke({"messages": [HumanMessage(content=question)]})
     return result["messages"][-1].content
 
 
 if __name__ == "__main__":
+    # Entry point for: python -m agent.agent "<question>"
     if len(sys.argv) < 2:
         print('Usage: python -m agent.agent "<question>"')
         sys.exit(1)

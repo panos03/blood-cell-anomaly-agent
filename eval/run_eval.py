@@ -4,7 +4,7 @@ Runs eval/questions.json through two conditions:
   - "with_tools":    the LangGraph ReAct agent (agent/agent.py), which can
                       call get_flagged_cells / get_cluster_summary /
                       compare_to_baseline.
-  - "without_tools":  the same Claude model with no tool access, answering
+  - "without_tools":  the same Gemini model with no tool access, answering
                       from its own knowledge alone.
 
 For each question it records the model's final answer, which tools (if any)
@@ -12,10 +12,10 @@ were called, and a heuristic grading verdict, then writes a per-question
 table plus summary statistics to eval/results.md.
 
 Usage:
-    python -m eval.run_eval [--limit N] [--model claude-opus-5]
+    python -m eval.run_eval [--limit N] [--model gemini-3.7-flash]
 
-Requires ANTHROPIC_API_KEY (or another credential ant auth login sets up)
-to be configured - every question costs a real API call in each condition.
+Requires GOOGLE_API_KEY (a free key from https://aistudio.google.com) to be
+set - every question costs a real API call in each condition.
 """
 from __future__ import annotations
 
@@ -25,8 +25,8 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, HumanMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from agent.agent import build_agent
 
@@ -44,6 +44,8 @@ _DECLINE_PATTERNS = re.compile(
 
 @dataclass
 class QuestionResult:
+    # One row per question: both conditions' answers, verdicts, and which
+    # tools got called along the way.
     id: str
     category: str
     question: str
@@ -72,6 +74,8 @@ def _extract_text(message) -> str:
 
 
 def _run_with_tools(agent, question: str) -> tuple[str, list[str]]:
+    # Condition 1: ask the real agent, then read back which tools it called
+    # from the transcript (not just its final answer).
     result = agent.invoke({"messages": [HumanMessage(content=question)]})
     messages = result["messages"]
     tools_called = [
@@ -85,6 +89,8 @@ def _run_with_tools(agent, question: str) -> tuple[str, list[str]]:
 
 
 def _run_without_tools(model, question: str) -> str:
+    # Condition 2 (the baseline): same question, plain Gemini, no tools.
+    # Shows what the agent's tool access is actually buying you.
     response = model.invoke(
         [
             HumanMessage(
@@ -125,6 +131,8 @@ def _grade_unsupported(answer_text: str) -> str:
 
 
 def _grade(question: dict, answer_text: str) -> str:
+    # Picks the right grader for this question's answer_type (numeric,
+    # string, string_all, or unsupported). See questions.json.
     answer_type = question["answer_type"]
     if answer_type == "numeric":
         return _grade_numeric(answer_text, question["expected_answer"], question.get("tolerance", 0))
@@ -138,6 +146,8 @@ def _grade(question: dict, answer_text: str) -> str:
 
 
 def _tool_call_correct(question: dict, tools_called: list[str]) -> bool | None:
+    # Separate from answer correctness: did the agent call the right tool at
+    # all, regardless of whether its final answer ended up right?
     expected = question["expected_tools"]
     if not expected:
         return None  # not applicable (unsupported questions expect no tool call)
@@ -145,9 +155,10 @@ def _tool_call_correct(question: dict, tools_called: list[str]) -> bool | None:
 
 
 def run(limit: int | None, model_id: str) -> list[QuestionResult]:
+    # Main loop: for every question, run both conditions and grade each one.
     questions = _load_questions(limit)
     agent = build_agent()
-    plain_model = ChatAnthropic(model=model_id, max_tokens=1024)
+    plain_model = ChatGoogleGenerativeAI(model=model_id, max_output_tokens=1024)
 
     results = []
     for q in questions:
@@ -176,6 +187,8 @@ def run(limit: int | None, model_id: str) -> list[QuestionResult]:
 
 
 def _summarize(results: list[QuestionResult], questions: list[dict]) -> str:
+    # Turns the 40 raw QuestionResults into the aggregate report (accuracy
+    # per condition, tool-call rate, failure modes) written to results.md.
     total = len(results)
     supported = [r for r in results if r.category != "unsupported"]
     unsupported = [r for r in results if r.category == "unsupported"]
@@ -215,7 +228,7 @@ def _summarize(results: list[QuestionResult], questions: list[dict]) -> str:
         "## Headline metrics",
         "",
         f"- Accuracy **with tools** (agent): {wt_correct}/{len(supported)} ({wt_correct / len(supported):.0%})",
-        f"- Accuracy **without tools** (plain Claude): {wot_correct}/{len(supported)} ({wot_correct / len(supported):.0%})",
+        f"- Accuracy **without tools** (plain Gemini): {wot_correct}/{len(supported)} ({wot_correct / len(supported):.0%})",
         f"- Correct tool call rate: {sum(tool_call_checks)}/{len(tool_call_checks)} ({tool_call_rate:.0%})",
         f"- On unsupported questions: {declined}/{len(unsupported)} declined appropriately, {hallucinated}/{len(unsupported)} hallucinated an answer",
         "",
@@ -254,14 +267,17 @@ def _summarize(results: list[QuestionResult], questions: list[dict]) -> str:
 
 
 def main():
+    # CLI entry point: parse args, run the eval, write eval/results.md.
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=None, help="Only run the first N questions")
-    parser.add_argument("--model", type=str, default=None, help="Override the model id used for both conditions")
+    parser.add_argument(
+        "--model", type=str, default=None, help="Override the model id used for both conditions (default: gemini-3.7-flash)"
+    )
     args = parser.parse_args()
 
     import os
 
-    model_id = args.model or os.environ.get("BLOOD_CELL_AGENT_MODEL", "claude-opus-5")
+    model_id = args.model or os.environ.get("BLOOD_CELL_AGENT_MODEL", "gemini-3.7-flash")
 
     results, questions = run(args.limit, model_id)
     report = _summarize(results, questions)
